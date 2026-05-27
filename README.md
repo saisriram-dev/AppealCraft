@@ -57,6 +57,8 @@ Transform messy, emotional complaints into:
 - Escalation checklist
 - PDF export
 
+---
+
 ## Notes
 
 This project is being built as a Phase 1 MVP focused on validating whether AI can become a practical consumer advocate.
