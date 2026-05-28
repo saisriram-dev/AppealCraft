@@ -17,7 +17,7 @@ def home():
     # Home page
     pass
 
-@app.post("/login")
-def login():
-    # Handle user login
-    pass
+# @app.post("/login")
+# def login():
+#     # Handle user login
+#     pass
