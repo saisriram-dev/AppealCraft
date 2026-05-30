@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AppealCraft — Build Your Letter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../static/css/app.css" />
+  </head>
+
+  <body>
+    <!-- ── BACKGROUND TEXTURE ── -->
+    <div class="bg-texture" aria-hidden="true"></div>
+
+    <!-- ── NAVBAR ── -->
+    <nav id="navbar">
+      <a href="index.html" class="nav-logo">
+        <span class="logo-icon" aria-hidden="true">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+        </span>
+        Appeal<span>Craft</span>
+      </a>
+
+      <div class="nav-center" id="nav-steps">
+        <div class="nav-step-wrap">
+          <span class="nav-step active" data-step="1">
+            <span class="step-dot"></span>
+            Your Case
+          </span>
+          <span class="nav-track">
+            <span class="nav-track-fill" id="nav-track-fill"></span>
+          </span>
+          <span class="nav-step" data-step="2">
+            <span class="step-dot"></span>
+            Your Letter
+          </span>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <button class="btn btn-ghost btn-sm" onclick="window.location.reload()">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+          </svg>
+          New Case
+        </button>
+      </div>
+    </nav>
+
+    <!-- ── MAIN LAYOUT ── -->
+    <main id="app-main">
+      <!-- ══ PANEL 1: INPUT FORM ══ -->
+      <section id="panel-input" class="app-panel active">
+        <div class="panel-inner">
+          <div class="panel-header">
+            <p class="section-label">Step 1 of 2</p>
+            <h1 class="panel-title">Tell us what happened.</h1>
+            <p class="panel-subtitle">
+              Be specific — dates, reference numbers, amounts. The more detail
+              you provide, the stronger your letter.
+            </p>
+          </div>
+
+          <form id="dispute-form" novalidate>
+            <!-- Company -->
+            <div class="field-group">
+              <label for="company" class="field-label">
+                Who are you fighting?
+                <span class="field-required" aria-label="required">*</span>
+              </label>
+              <div class="company-input-row">
+                <div class="company-select-wrap">
+                  <div class="select-wrapper">
+                    <select
+                      id="company-preset"
+                      class="field-select"
+                      onchange="syncCompany(this)"
+                    >
+                      <option value="">— Common companies —</option>
+                      <optgroup label="Airlines">
+                        <option value="Delta Air Lines">Delta Air Lines</option>
+                        <option value="American Airlines">
+                          American Airlines
+                        </option>
+                        <option value="United Airlines">United Airlines</option>
+                        <option value="Southwest Airlines">
+                          Southwest Airlines
+                        </option>
+                        <option value="Spirit Airlines">Spirit Airlines</option>
+                        <option value="Frontier Airlines">
+                          Frontier Airlines
+                        </option>
+                      </optgroup>
+                      <optgroup label="Banks & Credit">
+                        <option value="Chase Bank">Chase Bank</option>
+                        <option value="Bank of America">Bank of America</option>
+                        <option value="Wells Fargo">Wells Fargo</option>
+                        <option value="Citibank">Citibank</option>
+                        <option value="Capital One">Capital One</option>
+                        <option value="American Express">
+                          American Express
+                        </option>
+                      </optgroup>
+                      <optgroup label="Insurance">
+                        <option value="Cigna">Cigna</option>
+                        <option value="Aetna">Aetna</option>
+                        <option value="UnitedHealth">UnitedHealth</option>
+                        <option value="State Farm">State Farm</option>
+                        <option value="Geico">Geico</option>
+                      </optgroup>
+                      <optgroup label="Telecom">
+                        <option value="AT&T">AT&T</option>
+                        <option value="Verizon">Verizon</option>
+                        <option value="T-Mobile">T-Mobile</option>
+                        <option value="Comcast / Xfinity">
+                          Comcast / Xfinity
+                        </option>
+                      </optgroup>
+                      <optgroup label="Other">
+                        <option value="Amazon">Amazon</option>
+                        <option value="Airbnb">Airbnb</option>
+                        <option value="Uber">Uber</option>
+                        <option value="DoorDash">DoorDash</option>
+                        <option value="USPS">USPS</option>
+                        <option value="FedEx">FedEx</option>
+                        <option value="UPS">UPS</option>
+                      </optgroup>
+                    </select>
+                    <span class="select-arrow" aria-hidden="true">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+                <span class="company-or">or</span>
+                <input
+                  type="text"
+                  id="company"
+                  name="company"
+                  class="field-input"
+                  placeholder="Type company name…"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <p class="field-error" id="company-error" role="alert">
+                Please enter the company name.
+              </p>
+            </div>
+
+            <!-- Dispute type -->
+            <div class="field-group">
+              <label class="field-label">What kind of dispute is this?</label>
+              <div
+                class="chip-group"
+                id="dispute-type-chips"
+                role="group"
+                aria-label="Dispute type"
+              >
+                <button
+                  type="button"
+                  class="chip"
+                  data-value="Flight cancellation / delay"
+                >
+                  <span class="chip-icon">✈</span> Flight cancellation / delay
+                </button>
+                <button
+                  type="button"
+                  class="chip"
+                  data-value="Unauthorized charge"
+                >
+                  <span class="chip-icon">💳</span> Unauthorized charge
+                </button>
+                <button
+                  type="button"
+                  class="chip"
+                  data-value="Denied insurance claim"
+                >
+                  <span class="chip-icon">🏥</span> Denied insurance claim
+                </button>
+                <button type="button" class="chip" data-value="Billing error">
+                  <span class="chip-icon">🧾</span> Billing error
+                </button>
+                <button
+                  type="button"
+                  class="chip"
+                  data-value="Damaged / lost property"
+                >
+                  <span class="chip-icon">📦</span> Damaged / lost property
+                </button>
+                <button
+                  type="button"
+                  class="chip"
+                  data-value="Refund not received"
+                >
+                  <span class="chip-icon">↩</span> Refund not received
+                </button>
+                <button
+                  type="button"
+                  class="chip"
+                  data-value="Service not delivered"
+                >
+                  <span class="chip-icon">🚫</span> Service not delivered
+                </button>
+                <button type="button" class="chip" data-value="Other">
+                  Other
+                </button>
+              </div>
+              <input type="hidden" id="dispute-type" name="dispute_type" />
+            </div>
+
+            <!-- What happened -->
+            <div class="field-group">
+              <label for="complaint" class="field-label">
+                What happened?
+                <span class="field-required" aria-label="required">*</span>
+              </label>
+              <p class="field-hint">
+                Include dates, reference numbers, amounts, and what they told
+                you. The more specific, the stronger your letter.
+              </p>
+              <div class="textarea-wrapper">
+                <textarea
+                  id="complaint"
+                  name="complaint"
+                  class="field-textarea"
+                  placeholder="e.g. On March 14, 2025, Delta canceled flight DL204 from Atlanta to Chicago with less than 2 hours notice. The app offered a rebooking 27 hours later, which I was forced to accept. I am entitled to a full refund under DOT regulations, but Delta's customer service refused and offered only a $100 voucher."
+                  rows="8"
+                  required
+                ></textarea>
+              </div>
+              <div class="textarea-footer">
+                <p class="field-error" id="complaint-error" role="alert">
+                  Please describe what happened.
+                </p>
+                <span class="char-count" id="char-count" aria-live="polite"
+                  >0 / 2,000</span
+                >
+              </div>
+            </div>
+
+            <!-- Amount + Tone -->
+            <div class="field-group field-group-inline">
+              <div class="field-half">
+                <label for="amount" class="field-label"
+                  >Amount in dispute</label
+                >
+                <div class="amount-wrap">
+                  <span class="amount-prefix" aria-hidden="true">$</span>
+                  <input
+                    type="number"
+                    id="amount"
+                    name="amount"
+                    class="field-input amount-input"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    aria-label="Amount in dollars"
+                  />
+                </div>
+              </div>
+              <div class="field-half">
+                <label for="tone" class="field-label">Letter tone</label>
+                <div class="select-wrapper">
+                  <select id="tone" name="tone" class="field-select">
+                    <option value="firm">
+                      Firm &amp; Professional (recommended)
+                    </option>
+                    <option value="urgent">Urgent &amp; Demanding</option>
+                    <option value="formal">Strictly Formal / Legal</option>
+                  </select>
+                  <span class="select-arrow" aria-hidden="true">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- File upload -->
+            <div class="field-group">
+              <label class="field-label"
+                >Supporting evidence
+                <span class="optional-tag">optional</span></label
+              >
+              <p class="field-hint">
+                Receipts, booking confirmations, screenshots, contracts. PDFs
+                and images accepted.
+              </p>
+              <div
+                class="upload-zone"
+                id="upload-zone"
+                role="button"
+                tabindex="0"
+                aria-label="Upload files"
+              >
+                <div class="upload-icon" aria-hidden="true">
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  >
+                    <path
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                </div>
+                <p class="upload-label">
+                  Drag files here or <span class="upload-link">browse</span>
+                </p>
+                <p class="upload-sub">PDF, PNG, JPG — up to 10 MB each</p>
+                <input
+                  type="file"
+                  id="file-input"
+                  class="file-input-hidden"
+                  multiple
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  aria-hidden="true"
+                  tabindex="-1"
+                />
+              </div>
+              <div
+                class="file-list"
+                id="file-list"
+                role="list"
+                aria-label="Uploaded files"
+              ></div>
+            </div>
+
+            <!-- Submit -->
+            <div class="form-actions">
+              <button
+                type="submit"
+                class="btn btn-primary btn-xl"
+                id="submit-btn"
+              >
+                Generate My Dispute Letter
+                <span class="btn-arrow-icon" aria-hidden="true">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </span>
+              </button>
+              <p class="form-note">
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+                Your information is never stored or shared.
+              </p>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ══ PANEL 2: OUTPUT ══ -->
+      <section id="panel-output" class="app-panel">
+        <div class="panel-inner">
+          <!-- Generating state -->
+          <div id="generating-state" class="generating-wrap">
+            <div class="generating-visual" aria-hidden="true">
+              <div class="gen-ring gen-ring-1"></div>
+              <div class="gen-ring gen-ring-2"></div>
+              <div class="gen-ring gen-ring-3"></div>
+              <div class="gen-quill">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <path d="M20.24 12.24a6 6 0 00-8.49-8.49L5 10.5V19h8.5z" />
+                  <line x1="16" y1="8" x2="2" y2="22" />
+                  <line x1="17.5" y1="15" x2="9" y2="15" />
+                </svg>
+              </div>
+            </div>
+            <h2 class="generating-title">Building your case…</h2>
+            <p class="generating-sub" id="generating-sub">
+              Analyzing your dispute
+            </p>
+            <div class="generating-progress" aria-hidden="true">
+              <div class="gen-progress-bar" id="gen-progress-bar"></div>
+            </div>
+          </div>
+
+          <!-- Result state -->
+          <div id="result-state" class="result-wrap" style="display: none">
+            <div class="result-header">
+              <div class="result-header-left">
+                <div class="result-badge">
+                  <span class="badge-dot" aria-hidden="true"></span>
+                  Letter Ready
+                </div>
+                <h2 class="result-title">Your Demand Letter</h2>
+                <p class="result-meta">
+                  vs. <strong id="result-company"></strong>
+                  <span class="result-meta-sep" aria-hidden="true">·</span>
+                  <span id="result-type"></span>
+                </p>
+              </div>
+              <button
+                class="btn btn-ghost btn-sm"
+                onclick="window.location.reload()"
+                aria-label="Start new case"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="1 4 1 10 7 10" />
+                  <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+                </svg>
+                New Case
+              </button>
+            </div>
+
+            <!-- Letter card -->
+            <div class="output-card" id="output-letter-card">
+              <div class="output-card-header">
+                <div class="output-card-header-left">
+                  <span class="output-card-icon" aria-hidden="true">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                      />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  </span>
+                  <span class="output-card-label">Demand Letter</span>
+                </div>
+                <button
+                  class="copy-btn"
+                  id="copy-letter-btn"
+                  onclick="copyLetter()"
+                  aria-label="Copy letter text"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="9" y="9" width="13" height="13" rx="2" />
+                    <path
+                      d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                    />
+                  </svg>
+                  <span class="copy-btn-text">Copy</span>
+                </button>
+              </div>
+              <div class="letter-body" id="letter-body"></div>
+            </div>
+
+            <!-- Next steps card -->
+            <div class="output-card" id="output-steps-card">
+              <div class="output-card-header">
+                <div class="output-card-header-left">
+                  <span class="output-card-icon" aria-hidden="true">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <polyline points="9 11 12 14 22 4" />
+                      <path
+                        d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"
+                      />
+                    </svg>
+                  </span>
+                  <span class="output-card-label">Escalation Roadmap</span>
+                </div>
+              </div>
+              <ol
+                class="steps-list"
+                id="steps-list"
+                aria-label="Escalation steps"
+              ></ol>
+            </div>
+
+            <!-- Actions -->
+            <div class="result-actions">
+              <button
+                class="btn btn-primary btn-xl"
+                id="pdf-btn"
+                onclick="downloadPDF()"
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Download as PDF
+              </button>
+              <button class="btn btn-outline btn-xl" onclick="copyLetter()">
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path
+                    d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                  />
+                </svg>
+                Copy Letter Text
+              </button>
+              <button
+                class="btn btn-ghost btn-xl"
+                onclick="window.location.reload()"
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="1 4 1 10 7 10" />
+                  <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+                </svg>
+                Start New Case
+              </button>
+            </div>
+          </div>
+
+          <!-- Error state -->
+          <div id="error-state" class="error-wrap" style="display: none">
+            <div class="error-icon" aria-hidden="true">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h2 class="error-title">Something went wrong</h2>
+            <p class="error-sub" id="error-message">
+              We couldn't generate your letter. Please try again.
+            </p>
+            <button class="btn btn-primary" onclick="goBack()">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              Go Back &amp; Retry
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="../static/js/app.js"></script>
+  </body>
+</html>
