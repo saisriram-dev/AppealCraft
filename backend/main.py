@@ -1,23 +1,33 @@
-from fastapi import FastAPI
+import os
+from pathlib import Path
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-# from .models import QueryModel -> Will be implemented later for handling query data
 
 app = FastAPI()
+
+BASE_DIR = Path(__file__).parent.parent
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+# Setup templates
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Allow CORS for frontend development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this in production
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def home():
-    # Home page
-    pass
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse(request, "index.html")
 
-# @app.post("/login")
-# def login():
-#     # Handle user login
-#     pass
+@app.get("/appeal", response_class=HTMLResponse)
+async def app_page(request: Request):
+    return templates.TemplateResponse(request, "app.html")
