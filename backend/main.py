@@ -25,9 +25,9 @@ app.add_middleware(
 )
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def start_page(request: Request):
     return templates.TemplateResponse(request, "index.html")
 
 @app.get("/appeal", response_class=HTMLResponse)
-async def app_page(request: Request):
+async def appeal_page(request: Request):
     return templates.TemplateResponse(request, "app.html")
