@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from google import genai
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from typing import List, Optional
+from prompt.prompt import letter_prompt
 
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -40,13 +41,13 @@ async def start_page(request: Request):
 async def appeal_page(request: Request):
     return templates.TemplateResponse(request, "app.html")
 
-@app.post()
+@app.post("/submit")
 async def generate_letter(
     company: str = Form(...),
     disputeType: str = Form(...),
     complaint: str = Form(...),
-    amount: str = Form(...),
-    tone: str = Form(...),
+    amount: Optional[int] = Form(None),
+    tone: str = Form(default="Firm and Professional"),
     # By changing this to = File(None), the files field becomes completely optional
     files: Optional[List[UploadFile]] = File(None)
 ):
@@ -72,7 +73,17 @@ async def generate_letter(
             "No supporting files were provided, so rely strictly on the text parameters provided."
         )
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
-            
+        prompt = letter_prompt(company, disputeType, complaint, amount, tone, evidence_instructions)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            content=[prompt] + uploaded_files # Attach files to the prompt if they exist,
+        )
 
+        return {
+            "drafted_letter": response.text,
+        }
+
+    except Exception as e:
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        raise HTTPException(status_code=500, detail=str(e))

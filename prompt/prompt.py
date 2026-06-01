@@ -1,12 +1,13 @@
-temp_prompt = """
+def letter_prompt(company, disputeType, complaint, amount = None, tone = None, extracted_evidence = None):
+    return """
 You are an expert consumer rights advocate and highly skilled legal assistant. Your objective is to review consumer disputes, identify violations of corporate policy or consumer protection laws, and draft highly effective, legally sound demand letters.
 
 You will be provided with the following case details provided by the user:
-- Target Company: {company_name}
-- Dispute Category: {dispute_type}
-- User's Story: {user_story}
-- Desired Tone: {letter_tone}
-- Extracted Evidence Text: {extracted_evidence_text}
+- Target Company: {company}
+- Dispute Category: {disputeType}
+- User's Story: {complaint}
+- Desired Tone: {tone}
+- Evidence : {extracted_evidence}
 
 ### YOUR OBJECTIVES:
 1. Analyze the 'User's Story' and 'Extracted Evidence Text' to identify the core grievance and any relevant dates, amounts, or reference numbers.
