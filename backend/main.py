@@ -1,10 +1,18 @@
 import os
+import shutil
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+from google import genai
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from typing import List, Optional
+
+load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
 
@@ -31,3 +39,40 @@ async def start_page(request: Request):
 @app.get("/appeal", response_class=HTMLResponse)
 async def appeal_page(request: Request):
     return templates.TemplateResponse(request, "app.html")
+
+@app.post()
+async def generate_letter(
+    company: str = Form(...),
+    disputeType: str = Form(...),
+    complaint: str = Form(...),
+    amount: str = Form(...),
+    tone: str = Form(...),
+    # By changing this to = File(None), the files field becomes completely optional
+    files: Optional[List[UploadFile]] = File(None)
+):
+
+    uploaded_files = []
+    temp_dir = "./temp_uploads"
+    os.makedirs(temp_dir, exist_ok=True)
+
+    try:
+        if files:
+            for file in files:
+                temp_file_path = os.path.join(temp_dir, file.filename)
+                with open(temp_file_path, "wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+
+                gemini_file = client.upload_file(path=temp_file_path, mimetype=file.content_type)
+                uploaded_files.append(gemini_file)
+                os.remove(temp_file_path)
+        
+        evidence_instructions = (
+            "Analyze the attached evidence files to verify if they support the user's complaint." 
+            if uploaded_files else 
+            "No supporting files were provided, so rely strictly on the text parameters provided."
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+            
+
