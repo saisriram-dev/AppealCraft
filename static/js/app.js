@@ -168,17 +168,100 @@ function validateForm() {
   return valid;
 }
 
-/* ── FORM SUBMIT ── */
-form.addEventListener("submit", (e) => {
+/* ── FORM SUBMIT & GENERATION FLOW ── */
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  // 1. Validate Form inputs
   if (!validateForm()) {
     const firstError = form.querySelector(".has-error");
-    if (firstError)
+    if (firstError) {
       firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     return;
   }
-  submitToBackend();
+
+  // 2. Prevent double submissions
+  submitBtn.disabled = true;
+
+  // 3. Initialize UI transitions & get loading interval data
+  const uiState = runGeneration();
+
+  // 4. Construct Multi-part Form Data
+  const formData = new FormData();
+  formData.append("company", uiState.company);
+  formData.append("disputeType", uiState.disputeType);
+  formData.append("complaint", uiState.complaint);
+  if (uiState.amount) formData.append("amount", uiState.amount);
+  formData.append("tone", uiState.tone);
+
+  // Append verified files from your UI tracking array
+  uploadedFiles.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  // 5. Dispatch API Call to backend
+  try {
+    const response = await fetch("/submit", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Clears the text animation interval and shows the letter panel
+    showResult(uiState.company, uiState.disputeType, uiState.msgInterval);
+
+    const letterBody = document.getElementById("letter-body");
+    if (letterBody) {
+      letterBody.style.whiteSpace = "pre-wrap";
+      letterBody.textContent = data.drafted_letter;
+    }
+
+    // Render the AI Escalation Steps
+    const stepsListEl = document.getElementById("steps-list");
+    if (stepsListEl && data.escalation_roadmap) {
+      stepsListEl.innerHTML = data.escalation_roadmap
+        .map(
+          (step) => `
+          <li>
+            <div class="step-content">
+              ${escHtml(step)}
+            </div>
+          </li>
+        `,
+        )
+        .join("");
+    }
+  } catch (error) {
+    console.error("Error submitting form:", error);
+    // Stops the loading animation and flags the visual UI error state
+    showError(error.message, uiState.msgInterval);
+    submitBtn.disabled = false; // Re-enable so the user can fix errors and retry
+  }
 });
+
+function runGeneration() {
+  showOutputPanel();
+  genState.style.display = "flex";
+  resultState.style.display = "none";
+  errorState.style.display = "none";
+
+  const msgInterval = cycleMessages();
+
+  return {
+    company: companyInput.value.trim(),
+    disputeType: document.getElementById("dispute-type").value,
+    complaint: complaintTA.value.trim(),
+    amount: document.getElementById("amount").value,
+    tone: document.getElementById("tone").value,
+    msgInterval: msgInterval, // Explicitly returned so the submit tracker can clear it later
+  };
+}
 
 /* ── GENERATING MESSAGES ── */
 const GENERATING_MESSAGES = [
@@ -252,30 +335,6 @@ function goBack() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-/* ── GENERATION FLOW ── */
-function runGeneration() {
-  showOutputPanel();
-  genState.style.display = "flex";
-  resultState.style.display = "none";
-  errorState.style.display = "none";
-
-  const msgInterval = cycleMessages();
-
-  const company = companyInput.value.trim();
-  const disputeType = document.getElementById("dispute-type").value;
-  const complaint = complaintTA.value.trim();
-  const amount = document.getElementById("amount").value;
-  const tone = document.getElementById("tone").value;
-
-  return {
-    company,
-    disputeType,
-    complaint,
-    amount,
-    tone,
-  };
-}
-
 function showResult(company, disputeType, msgInterval) {
   clearInterval(msgInterval);
   resultCompany.textContent = company;
@@ -295,44 +354,6 @@ function showError(message, msgInterval) {
     message || "Something went wrong. Please try again.";
 }
 
-/* ── BACKEND POST ── */
-async function problem_details() {
-  const { company, disputeType, complaint, amount, tone } = runGeneration();
-
-  submitBtn.addEventListener("click", async (e) => {
-    // Prevent default form submission behavior
-    e.preventDefault();
-
-    // Disable the button to prevent multiple clicks
-    submitBtn.disabled = true;
-
-    const formData = new FormData();
-    formData.append("company", company);
-    formData.append("disputeType", disputeType);
-    formData.append("complaint", complaint);
-    formData.append("amount", amount);
-    formData.append("tone", tone);
-
-    const files = fileInput.files;
-    if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
-        formData.append("files", files[i]);
-      }
-    }
-
-    try {
-      const response = await fetch("", {
-        method: "POST",
-        body: formData,
-      });
-
-      data = await response.json();
-    } catch (error) {
-      console.error("Error submitting form:", error);
-    }
-  });
-}
-
 /* ── UTILS ── */
 function escHtml(str) {
   if (!str) return "";
@@ -342,3 +363,113 @@ function escHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+/* ── ACTION BUTTONS ── */
+
+// 1. Copy Letter Text Functionality
+window.copyLetter = function () {
+  const letterBody = document.getElementById("letter-body");
+  if (!letterBody) return;
+
+  const textToCopy = letterBody.textContent;
+
+  navigator.clipboard
+    .writeText(textToCopy)
+    .then(() => {
+      // Find both Copy buttons in the DOM to update their text visually
+      const topCopyBtn = document.getElementById("copy-letter-btn");
+      const bottomCopyBtn = document.querySelector(
+        ".result-actions .btn-outline",
+      );
+
+      // Visual feedback for the small top-right Copy button
+      if (topCopyBtn) {
+        const originalText = topCopyBtn.querySelector(".copy-btn-text");
+        if (originalText) {
+          originalText.textContent = "Copied!";
+          setTimeout(() => {
+            originalText.textContent = "Copy";
+          }, 2000);
+        }
+      }
+
+      // Visual feedback for the large bottom action button
+      if (bottomCopyBtn) {
+        const originalHTML = bottomCopyBtn.innerHTML;
+        bottomCopyBtn.textContent = "Copied to Clipboard!";
+        bottomCopyBtn.style.borderColor = "#2e7d32"; // Green success border
+        bottomCopyBtn.style.color = "#2e7d32";
+
+        setTimeout(() => {
+          bottomCopyBtn.innerHTML = originalHTML;
+          bottomCopyBtn.style.borderColor = "";
+          bottomCopyBtn.style.color = "";
+        }, 2000);
+      }
+    })
+    .catch((err) => {
+      console.error("Unable to copy to clipboard", err);
+      alert("Failed to copy text. Please select the text manually to copy.");
+    });
+};
+
+// 2. Download/Print as PDF Functionality (Bypasses Popup Blockers & Race Conditions)
+window.downloadPDF = function () {
+  const letterBody = document.getElementById("letter-body");
+  if (!letterBody) return;
+
+  const letterText = letterBody.textContent;
+  const companyName =
+    document.getElementById("result-company")?.textContent || "Company";
+
+  // Create a temporary hidden iframe instead of a buggy popup window
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+  iframeDoc.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Demand Letter - ${escHtml(companyName)}</title>
+        <style>
+          body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            margin: 1in;
+            color: #000;
+            white-space: pre-wrap; /* Crucial: preserves all paragraph double-spacing */
+          }
+          @page {
+            size: letter;
+            margin: 1in;
+          }
+        </style>
+      </head>
+      <body>${escHtml(letterText)}</body>
+    </html>
+  `);
+
+  iframeDoc.close();
+
+  // Focus and trigger system print dialog on the loaded frame context
+  iframe.contentWindow.focus();
+
+  // Safe timeout to guarantee Brave/Chrome paints the layout before printing
+  setTimeout(() => {
+    iframe.contentWindow.print();
+
+    // Clean up the temporary iframe after print sequence concludes
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 1000);
+  }, 500);
+};

@@ -1,15 +1,18 @@
 import os
 import shutil
+import uuid
+import json
+import re
 from pathlib import Path
-from fastapi import FastAPI, Request
+from typing import List, Optional
+from dotenv import load_dotenv
+from google import genai
+import traceback
+from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-from google import genai
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from typing import List, Optional
 from prompt.prompt import letter_prompt
 
 load_dotenv()
@@ -41,49 +44,112 @@ async def start_page(request: Request):
 async def appeal_page(request: Request):
     return templates.TemplateResponse(request, "app.html")
 
+# Changed to 'def' so FastAPI processes this blocking I/O request in a thread pool
 @app.post("/submit")
-async def generate_letter(
+def generate_letter(
     company: str = Form(...),
     disputeType: str = Form(...),
     complaint: str = Form(...),
     amount: Optional[int] = Form(None),
     tone: str = Form(default="Firm and Professional"),
-    # By changing this to = File(None), the files field becomes completely optional
     files: Optional[List[UploadFile]] = File(None)
 ):
-
     uploaded_files = []
-    temp_dir = "./temp_uploads"
+    
+    # Isolate this specific request into its own folder using a unique UUID
+    request_id = str(uuid.uuid4())
+    temp_dir = os.path.join("./temp_uploads", request_id)
     os.makedirs(temp_dir, exist_ok=True)
 
     try:
         if files:
             for file in files:
+                # Skip over accidental empty payloads or unselected inputs
+                if not file.filename:
+                    continue
+                    
                 temp_file_path = os.path.join(temp_dir, file.filename)
+                
+                # Safely copy uploaded file streams synchronously
                 with open(temp_file_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
 
+                # Send file payload to Gemini API
                 gemini_file = client.upload_file(path=temp_file_path, mimetype=file.content_type)
                 uploaded_files.append(gemini_file)
-                os.remove(temp_file_path)
-        
+
         evidence_instructions = (
             "Analyze the attached evidence files to verify if they support the user's complaint." 
             if uploaded_files else 
             "No supporting files were provided, so rely strictly on the text parameters provided."
         )
 
+        # 1. Force Gemini to output JSON with both keys clearly defined
         prompt = letter_prompt(company, disputeType, complaint, amount, tone, evidence_instructions)
+        prompt += f"""
+
+        Your entire response MUST be formatted strictly as a single JSON object. Do not include any introductory or concluding text outside of this JSON.
+        The JSON object must contain exactly these two keys:
+        1. "drafted_letter": (string) The complete, highly detailed, professional demand letter. Use double newlines (\\n\\n) explicitly between paragraphs to preserve clean formatting.
+        2. "escalation_roadmap": (array of strings) A step-by-step sequential list of 3 to 5 realistic next steps tailored to {company} and the industry of '{disputeType}' if they ignore or reject this demand (e.g., filing with the DOT/FAA for airlines, CFPB for banks, state Insurance Commissioner, etc.)."""
+
+        # 2. Request generation
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            content=[prompt] + uploaded_files # Attach files to the prompt if they exist,
+            model="gemini-3-flash",
+            contents=[prompt] + uploaded_files,
         )
 
+        raw_text = response.text
+        match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+        
+        try:
+            if match:
+                data = json.loads(match.group(0))
+            else:
+                raise ValueError("No JSON found")
+            
+            letter_content = data.get("drafted_letter", "No letter found.")
+            roadmap_content = data.get("escalation_roadmap", [])
+            
+        except Exception as e:
+            print(f"DEBUG: Parsing failed. Raw response: {raw_text}")
+            letter_content = response.text
+            roadmap_content = ["Error: Could not parse steps. Check console."]
+
         return {
-            "drafted_letter": response.text,
+            "drafted_letter": letter_content,
+            "escalation_roadmap": roadmap_content
         }
 
     except Exception as e:
+        # Log the actual error to your terminal for debugging
+        print("--- BACKEND CRASH DETECTED ---")
+        traceback.print_exc() 
+        print("------------------------------")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+    finally:
+        # Guarantee local cleanup without crashing the web request due to Windows file locks
         if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-        raise HTTPException(status_code=500, detail=str(e))
+            try:
+                # 1. Close any remaining file streams explicitly if your files list exists
+                if 'files' in locals() and files:
+                    for file in files:
+                        file.file.close()
+
+                # 2. Attempt cleanup
+                shutil.rmtree(temp_dir)
+            except PermissionError:
+                # 3. Fallback for stubborn Windows file-locks: 
+                # Schedule deletion on a micro-delay or ignore so the user still gets their letter!
+                import threading
+                import time
+
+                def delayed_cleanup(path):
+                    time.sleep(1)  # Wait 1 second for the SDK/OS to release the handle
+                    try:
+                        shutil.rmtree(path, ignore_errors=True)
+                    except Exception:
+                        pass
+
+                threading.Thread(target=delayed_cleanup, args=(temp_dir,), daemon=True).start()
