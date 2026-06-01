@@ -86,16 +86,10 @@ def generate_letter(
 
         # 1. Force Gemini to output JSON with both keys clearly defined
         prompt = letter_prompt(company, disputeType, complaint, amount, tone, evidence_instructions)
-        prompt += f"""
-
-        Your entire response MUST be formatted strictly as a single JSON object. Do not include any introductory or concluding text outside of this JSON.
-        The JSON object must contain exactly these two keys:
-        1. "drafted_letter": (string) The complete, highly detailed, professional demand letter. Use double newlines (\\n\\n) explicitly between paragraphs to preserve clean formatting.
-        2. "escalation_roadmap": (array of strings) A step-by-step sequential list of 3 to 5 realistic next steps tailored to {company} and the industry of '{disputeType}' if they ignore or reject this demand (e.g., filing with the DOT/FAA for airlines, CFPB for banks, state Insurance Commissioner, etc.)."""
 
         # 2. Request generation
         response = client.models.generate_content(
-            model="gemini-3-flash",
+            model="gemini-3.1-flash-lite",
             contents=[prompt] + uploaded_files,
         )
 
@@ -109,7 +103,11 @@ def generate_letter(
                 raise ValueError("No JSON found")
             
             letter_content = data.get("drafted_letter", "No letter found.")
-            roadmap_content = data.get("escalation_roadmap", [])
+            roadmap_content = data.get("escalation_roadmap") or data.get("escalation_steps", [])
+            confidence_score = data.get("confidence_score", None)
+
+            print("DEBUG keys:", list(data.keys()))        # ← add
+            print("DEBUG roadmap:", roadmap_content)
             
         except Exception as e:
             print(f"DEBUG: Parsing failed. Raw response: {raw_text}")
@@ -118,7 +116,8 @@ def generate_letter(
 
         return {
             "drafted_letter": letter_content,
-            "escalation_roadmap": roadmap_content
+            "escalation_roadmap": roadmap_content,
+            "confidence_score": confidence_score
         }
 
     except Exception as e:
