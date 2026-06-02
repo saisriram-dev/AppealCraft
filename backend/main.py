@@ -13,12 +13,35 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from fastapi.responses import JSONResponse
+from fastapi import Request
 from prompt.prompt import letter_prompt
 
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
+
+limiter = Limiter(key_func=get_remote_address)
+
+app.state.limiter = limiter
+
+app.add_exception_handler(
+    RateLimitExceeded,
+    lambda request, exc: JSONResponse(
+        status_code=429,
+        content={
+            "success": False,
+            "message": "Too many requests. Please wait a minute and try again."
+        }
+    )
+)
+
+app.add_middleware(SlowAPIMiddleware)
 
 BASE_DIR = Path(__file__).parent.parent
 
@@ -46,7 +69,9 @@ async def appeal_page(request: Request):
 
 # Changed to 'def' so FastAPI processes this blocking I/O request in a thread pool
 @app.post("/submit")
+@limiter.limit("5/minute")
 def generate_letter(
+    request: Request,
     company: str = Form(...),
     disputeType: str = Form(...),
     complaint: str = Form(...),

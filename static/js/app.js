@@ -207,6 +207,11 @@ form.addEventListener("submit", async (e) => {
       body: formData,
     });
 
+    if (response.status === 429) {
+      alert("Too many requests. Please wait a minute before trying again.");
+      return;
+    }
+
     if (!response.ok) {
       throw new Error(`Server error: ${response.statusText}`);
     }
