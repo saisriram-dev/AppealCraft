@@ -1,4 +1,6 @@
-def letter_prompt(company, disputeType, complaint, amount = None, tone = None, extracted_evidence = None):
+def letter_prompt(
+    company, disputeType, complaint, amount=None, tone=None, extracted_evidence=None
+):
     return f"""
 You are an expert consumer rights advocate and highly skilled legal assistant. Your objective is to review consumer disputes, identify violations of corporate policy or consumer protection laws, and draft highly effective, legally sound demand letters.
 

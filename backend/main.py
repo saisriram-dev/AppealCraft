@@ -36,9 +36,9 @@ app.add_exception_handler(
         status_code=429,
         content={
             "success": False,
-            "message": "Too many requests. Please wait a minute and try again."
-        }
-    )
+            "message": "Too many requests. Please wait a minute and try again.",
+        },
+    ),
 )
 
 app.add_middleware(SlowAPIMiddleware)
@@ -59,13 +59,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/", response_class=HTMLResponse)
 async def start_page(request: Request):
     return templates.TemplateResponse(request, "index.html")
 
+
 @app.get("/appeal", response_class=HTMLResponse)
 async def appeal_page(request: Request):
     return templates.TemplateResponse(request, "app.html")
+
 
 # Changed to 'def' so FastAPI processes this blocking I/O request in a thread pool
 @app.post("/submit")
@@ -77,10 +80,10 @@ def generate_letter(
     complaint: str = Form(...),
     amount: Optional[int] = Form(None),
     tone: str = Form(default="Firm and Professional"),
-    files: Optional[List[UploadFile]] = File(None)
+    files: Optional[List[UploadFile]] = File(None),
 ):
     uploaded_files = []
-    
+
     # Isolate this specific request into its own folder using a unique UUID
     request_id = str(uuid.uuid4())
     temp_dir = os.path.join("./temp_uploads", request_id)
@@ -92,25 +95,29 @@ def generate_letter(
                 # Skip over accidental empty payloads or unselected inputs
                 if not file.filename:
                     continue
-                    
+
                 temp_file_path = os.path.join(temp_dir, file.filename)
-                
+
                 # Safely copy uploaded file streams synchronously
                 with open(temp_file_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
 
                 # Send file payload to Gemini API
-                gemini_file = client.upload_file(path=temp_file_path, mimetype=file.content_type)
+                gemini_file = client.upload_file(
+                    path=temp_file_path, mimetype=file.content_type
+                )
                 uploaded_files.append(gemini_file)
 
         evidence_instructions = (
-            "Analyze the attached evidence files to verify if they support the user's complaint." 
-            if uploaded_files else 
-            "No supporting files were provided, so rely strictly on the text parameters provided."
+            "Analyze the attached evidence files to verify if they support the user's complaint."
+            if uploaded_files
+            else "No supporting files were provided, so rely strictly on the text parameters provided."
         )
 
         # 1. Force Gemini to output JSON with both keys clearly defined
-        prompt = letter_prompt(company, disputeType, complaint, amount, tone, evidence_instructions)
+        prompt = letter_prompt(
+            company, disputeType, complaint, amount, tone, evidence_instructions
+        )
 
         # 2. Request generation
         response = client.models.generate_content(
@@ -119,21 +126,23 @@ def generate_letter(
         )
 
         raw_text = response.text
-        match = re.search(r'\{.*\}', raw_text, re.DOTALL)
-        
+        match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+
         try:
             if match:
                 data = json.loads(match.group(0))
             else:
                 raise ValueError("No JSON found")
-            
+
             letter_content = data.get("drafted_letter", "No letter found.")
-            roadmap_content = data.get("escalation_roadmap") or data.get("escalation_steps", [])
+            roadmap_content = data.get("escalation_roadmap") or data.get(
+                "escalation_steps", []
+            )
             confidence_score = data.get("confidence_score", None)
 
-            print("DEBUG keys:", list(data.keys()))        # ← add
+            print("DEBUG keys:", list(data.keys()))  # ← add
             print("DEBUG roadmap:", roadmap_content)
-            
+
         except Exception as e:
             print(f"DEBUG: Parsing failed. Raw response: {raw_text}")
             letter_content = response.text
@@ -142,13 +151,13 @@ def generate_letter(
         return {
             "drafted_letter": letter_content,
             "escalation_roadmap": roadmap_content,
-            "confidence_score": confidence_score
+            "confidence_score": confidence_score,
         }
 
     except Exception as e:
         # Log the actual error to your terminal for debugging
         print("--- BACKEND CRASH DETECTED ---")
-        traceback.print_exc() 
+        traceback.print_exc()
         print("------------------------------")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
@@ -157,14 +166,14 @@ def generate_letter(
         if os.path.exists(temp_dir):
             try:
                 # 1. Close any remaining file streams explicitly if your files list exists
-                if 'files' in locals() and files:
+                if "files" in locals() and files:
                     for file in files:
                         file.file.close()
 
                 # 2. Attempt cleanup
                 shutil.rmtree(temp_dir)
             except PermissionError:
-                # 3. Fallback for stubborn Windows file-locks: 
+                # 3. Fallback for stubborn Windows file-locks:
                 # Schedule deletion on a micro-delay or ignore so the user still gets their letter!
                 import threading
                 import time
@@ -176,4 +185,6 @@ def generate_letter(
                     except Exception:
                         pass
 
-                threading.Thread(target=delayed_cleanup, args=(temp_dir,), daemon=True).start()
+                threading.Thread(
+                    target=delayed_cleanup, args=(temp_dir,), daemon=True
+                ).start()
